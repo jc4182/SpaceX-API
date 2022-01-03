@@ -1,3 +1,5 @@
+
+[![Coverage Status](https://coveralls.io/repos/github/r-spacex/SpaceX-API/badge.svg?branch=master)](https://coveralls.io/github/r-spacex/SpaceX-API?branch=master)
 <p align="center"><img src="https://live.staticflickr.com/65535/49185149122_37f5c52e43_k.jpg"></p>
 
 <h1 align="center">SpaceX REST API</h1>
