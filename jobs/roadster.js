@@ -1,87 +1,27 @@
-const got = require('got');
-const moment = require('moment-timezone');
-const shell = require('shelljs');
-const { logger } = require('../middleware/logger');
+import got from 'got';
+import moment from 'moment-timezone';
+import { logger } from '../middleware/index.js';
 
-const SPACEX_API = 'https://api.spacexdata.com/v4';
+const API = process.env.SPACEX_API;
 const KEY = process.env.SPACEX_KEY;
 const HEALTHCHECK = process.env.ROADSTER_HEALTHCHECK;
-
-// Using date range so Horizons doesn't give us the default 10 day data
-const today = moment().format('YYYY-MMM-DD HH:mm:ss');
-const tomorrow = moment().add(1, 'day').format('YYYY-MMM-DD HH:mm:ss');
-
-const ORBIT_URL = `https://ssd.jpl.nasa.gov/horizons_batch.cgi?batch=1&
-COMMAND= '-143205'&
-CENTER= '500@10'&
-MAKE_EPHEM= 'YES'&
-TABLE_TYPE= 'ELEMENTS'&
-START_TIME= '${today}'&
-STOP_TIME= '${tomorrow}'&
-STEP_SIZE= '1 d'&
-OUT_UNITS= 'AU-D'&
-REF_PLANE= 'ECLIPTIC'&
-REF_SYSTEM= 'J2000'&
-TP_TYPE= 'ABSOLUTE'&
-ELEM_LABELS= 'YES'&
-CSV_FORMAT= 'NO'&
-OBJ_DATA= 'YES'`;
-
-const EARTH_DIST_URL = `https://ssd.jpl.nasa.gov/horizons_batch.cgi?batch=1&
-COMMAND= '-143205'&
-CENTER= '500@399'&
-MAKE_EPHEM= 'YES'&
-TABLE_TYPE= 'OBSERVER'&
-START_TIME= '${today}'&
-STOP_TIME= '${tomorrow}'&
-STEP_SIZE= '1 d'&
-CAL_FORMAT= 'CAL'&
-TIME_DIGITS= 'MINUTES'&
-ANG_FORMAT= 'HMS'&
-OUT_UNITS= 'KM-S'&
-RANGE_UNITS= 'AU'&
-APPARENT= 'AIRLESS'&
-SUPPRESS_RANGE_RATE= 'NO'&
-SKIP_DAYLT= 'NO'&
-EXTRA_PREC= 'NO'&
-R_T_S_ONLY= 'NO'&
-REF_SYSTEM= 'J2000'&
-CSV_FORMAT= 'NO'&
-OBJ_DATA= 'YES'&
-QUANTITIES= '19,20'`;
-
-const MARS_DIST_URL = `https://ssd.jpl.nasa.gov/horizons_batch.cgi?batch=1&
-COMMAND= '-143205'&
-CENTER= '500@499'&
-MAKE_EPHEM= 'YES'&
-TABLE_TYPE= 'OBSERVER'&
-START_TIME= '${today}'&
-STOP_TIME= '${tomorrow}'&
-STEP_SIZE= '1 d'&
-CAL_FORMAT= 'CAL'&
-TIME_DIGITS= 'MINUTES'&
-ANG_FORMAT= 'HMS'&
-OUT_UNITS= 'KM-S'&
-RANGE_UNITS= 'AU'&
-APPARENT= 'AIRLESS'&
-SUPPRESS_RANGE_RATE= 'NO'&
-SKIP_DAYLT= 'NO'&
-EXTRA_PREC= 'NO'&
-R_T_S_ONLY= 'NO'&
-REF_SYSTEM= 'J2000'&
-CSV_FORMAT= 'NO'&
-OBJ_DATA= 'YES'&
-QUANTITIES= '19,20,22'`;
-
-shell.config.silent = true;
 
 /**
  * This script gathers tesla roadster orbital data from JPL Horizons,
  * parses the output with various regular expressions, and updates
  * the data accordingly.
+ * See https://ssd-api.jpl.nasa.gov/doc/horizons.html for more information
  * @return {Promise<void>}
  */
-module.exports = async () => {
+export default async () => {
+  // Using date range so Horizons doesn't give us the default 10 day data
+  const today = moment().format('YYYY-MMM-DD HH:mm:ss');
+  const tomorrow = moment().add(1, 'day').format('YYYY-MMM-DD HH:mm:ss');
+
+  const ORBIT_URL = `https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='-143205'&CENTER='500@10'&EPHEM_TYPE='ELEMENTS'&START_TIME='${today}'&STOP_TIME='${tomorrow}'&STEP_SIZE='1 d'&OUT_UNITS='AU-D'&REF_PLANE='ECLIPTIC'&REF_SYSTEM='J2000'&TP_TYPE='ABSOLUTE'&ELEM_LABELS='YES'&CSV_FORMAT='NO'`;
+  const EARTH_DIST_URL = `https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='-143205'&CENTER='500@399'&START_TIME='${today}'&STOP_TIME='${tomorrow}'&STEP_SIZE='1 d'&CAL_FORMAT='CAL'&TIME_DIGITS='MINUTES'&ANG_FORMAT='HMS'&OUT_UNITS='KM-S'&RANGE_UNITS='AU'&APPARENT='AIRLESS'&SUPPRESS_RANGE_RATE='NO'&SKIP_DAYLT='NO'&EXTRA_PREC='NO'&R_T_S_ONLY='NO'&REF_SYSTEM='J2000'&CSV_FORMAT='NO'&QUANTITIES='19,20'`;
+  const MARS_DIST_URL = `https://ssd.jpl.nasa.gov/api/horizons.api?format=text&COMMAND='-143205'&CENTER='500@499'&START_TIME='${today}'&STOP_TIME='${tomorrow}'&STEP_SIZE='1 d'&CAL_FORMAT='CAL'&TIME_DIGITS='MINUTES'&ANG_FORMAT='HMS'&OUT_UNITS='KM-S'&RANGE_UNITS='AU'&APPARENT='AIRLESS'&SUPPRESS_RANGE_RATE='NO'&SKIP_DAYLT='NO'&EXTRA_PREC='NO'&R_T_S_ONLY='NO'&REF_SYSTEM='J2000'&CSV_FORMAT='NO'&QUANTITIES='19,20,22'`;
+
   try {
     const params = {
       resolveBodyOnly: true,
@@ -151,29 +91,29 @@ module.exports = async () => {
     soeReg.exec(earthDist);
     const earthSoe = RegExp.$1;
     const strippedEarth = earthSoe.replace(/(\r\n\t|\n|\r\t)/gm, '');
-    const earthResult = shell.exec(`echo ${strippedEarth}`).exec('awk \'NR==1{print $5}\'');
-    const earthDistanceKm = (parseFloat(earthResult.stdout.trim()) * 149598073);
+    const earthResult = strippedEarth.split(/\s+/)[5];
+    const earthDistanceKm = (parseFloat(earthResult.trim()) * 149598073);
     const earthDistanceMi = earthDistanceKm * 0.621371;
 
     // Read SOE of mars distance + calculate distance in miles and kilometers
     soeReg.exec(marsDist);
     const marsSoe = RegExp.$1;
     const strippedMars = marsSoe.replace(/(\r\n\t|\n|\r\t)/gm, '');
-    const marsResult = shell.exec(`echo ${strippedMars}`).exec('awk \'NR==1{print $5}\'');
-    const marsDistanceKm = (parseFloat(marsResult.stdout.trim()) * 149598073);
+    const marsResult = strippedMars.split(/\s+/)[5];
+    const marsDistanceKm = (parseFloat(marsResult.trim()) * 149598073);
     const marsDistanceMi = marsDistanceKm * 0.621371;
 
     // Read SOE of orbital speed in KM/s + calculate kph and mph
-    const speedResult = shell.exec(`echo ${strippedMars}`).exec('awk \'NR==1{print $7}\'');
-    const orbitalSpeedKph = (parseFloat(speedResult.stdout.trim()) * 60.0 * 60.0);
+    const speedResult = strippedMars.split(/\s+/)[5];
+    const orbitalSpeedKph = (parseFloat(speedResult.trim()) * 60.0 * 60.0);
     const orbitalSpeedMph = orbitalSpeedKph * 0.621371;
 
-    const roadster = await got(`${SPACEX_API}/roadster`, {
+    const roadster = await got(`${API}/roadster`, {
       resolveBodyOnly: true,
       responseType: 'json',
     });
 
-    await got.patch(`${SPACEX_API}/roadster/${roadster.id}`, {
+    await got.patch(`${API}/roadster/${roadster.id}`, {
       json: {
         epoch_jd: epoch,
         apoapsis_au: aad,
@@ -202,6 +142,6 @@ module.exports = async () => {
       await got(HEALTHCHECK);
     }
   } catch (error) {
-    console.log(error);
+    console.log(`Roadster Error: ${error.message}`);
   }
 };

@@ -1,21 +1,29 @@
-const got = require('got');
-const { CookieJar } = require('tough-cookie');
-const Moment = require('moment-timezone');
-const MomentRange = require('moment-range');
-const { getSatelliteInfo } = require('tle.js/dist/tlejs.cjs');
-const { logger } = require('../middleware/logger');
+import got from 'got';
+import { CookieJar } from 'tough-cookie';
+import Moment from 'moment-timezone';
+import MomentRange from 'moment-range';
+import { getSatelliteInfo } from 'tle.js';
+import { logger } from '../middleware/index.js';
 
-const SPACEX_API = 'https://api.spacexdata.com/v4';
+const API = process.env.SPACEX_API;
 const KEY = process.env.SPACEX_KEY;
 const HEALTHCHECK = process.env.STARLINK_HEALTHCHECK;
 const moment = MomentRange.extendMoment(Moment);
 
 /**
  * Generate Starlink version from date
- * @param {Date} date
+ * @param {Date}    date   Launch date UTC
+ * @param {String}  name   Mission name
  * @return {String}
  */
-const starlinkVersion = (date) => {
+const starlinkVersion = (date, name) => {
+  if (!date || !name) {
+    return null;
+  }
+  const missionNameVersion = name.match(/(?<version>v\d{1,3}.\d{1,3})/i)?.groups?.version;
+  if (missionNameVersion) {
+    return missionNameVersion;
+  }
   const parsedDate = moment(date);
   let version = null;
   if (parsedDate.isAfter('2019-11-11')) {
@@ -32,7 +40,7 @@ const starlinkVersion = (date) => {
  * Update Starlink orbits
  * @return {Promise<void>}
  */
-module.exports = async () => {
+export default async () => {
   try {
     const cookieJar = new CookieJar();
 
@@ -44,21 +52,21 @@ module.exports = async () => {
       cookieJar,
     });
 
-    // eslint-disable-next-line no-secrets/no-secrets
     const data = await got('https://www.space-track.org/basicspacedata/query/class/gp/OBJECT_NAME/~~STARLINK,~~TINTIN/orderby/NORAD_CAT_ID', {
-      resolveBodyOnly: true,
       responseType: 'json',
-      timeout: 480000, // 8 minutes
+      timeout: {
+        request: 480000, // 8 minutes
+      },
       cookieJar,
     });
 
-    const starlinkSats = data.filter((sat) => /starlink|tintin/i.test(sat.OBJECT_NAME));
+    const starlinkSats = data.body.filter((sat) => /starlink|tintin/i.test(sat.OBJECT_NAME));
 
     const updates = starlinkSats.map(async (sat) => {
       const date = moment.utc(sat.LAUNCH_DATE, 'YYYY-MM-DD');
       const range = date.range('day');
 
-      const launches = await got.post(`${SPACEX_API}/launches/query`, {
+      const launches = await got.post(`${API}/launches/query`, {
         json: {
           query: {
             date_utc: {
@@ -75,7 +83,7 @@ module.exports = async () => {
       });
 
       let position;
-      if (parseInt(sat.DECAYED, 10) !== 1) {
+      if (!(sat.DECAY_DATE)) {
         const tle = [sat.TLE_LINE1, sat.TLE_LINE2];
         try {
           position = await getSatelliteInfo(tle);
@@ -84,14 +92,17 @@ module.exports = async () => {
         }
       }
 
-      await got.patch(`${SPACEX_API}/starlink/${sat.NORAD_CAT_ID}`, {
+      await got.patch(`${API}/starlink/${sat.NORAD_CAT_ID}`, {
         json: {
-          version: starlinkVersion(launches.docs[0].date_utc) || null,
-          launch: launches.docs[0].id || null,
-          longitude: position?.lng || null,
-          latitude: position?.lat || null,
-          height_km: position?.height || null,
-          velocity_kms: position?.velocity || null,
+          version: starlinkVersion(
+            launches?.docs[0]?.date_utc ?? null,
+            launches?.docs[0]?.name ?? null,
+          ),
+          launch: launches?.docs[0]?.id ?? null,
+          longitude: position?.lng ?? null,
+          latitude: position?.lat ?? null,
+          height_km: position?.height ?? null,
+          velocity_kms: position?.velocity ?? null,
           spaceTrack: {
             CCSDS_OMM_VERS: sat.CCSDS_OMM_VERS,
             COMMENT: sat.COMMENT,
@@ -128,7 +139,7 @@ module.exports = async () => {
             LAUNCH_DATE: sat.LAUNCH_DATE,
             SITE: sat.SITE,
             DECAY_DATE: sat.DECAY_DATE,
-            DECAYED: sat.DECAYED,
+            DECAYED: !!(sat.DECAY_DATE),
             FILE: sat.FILE,
             GP_ID: sat.GP_ID,
             TLE_LINE0: sat.TLE_LINE0,
@@ -152,6 +163,7 @@ module.exports = async () => {
       await got(HEALTHCHECK);
     }
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    console.log(`Starlink Error: ${error.message}`);
   }
 };

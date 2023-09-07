@@ -1,10 +1,11 @@
 
-FROM node:14-alpine
+FROM node:18-alpine
 
 LABEL maintainer="jakewmeyer@gmail.com"
+LABEL autoheal="true"
 
 HEALTHCHECK --interval=10s --timeout=3s \
-  CMD ./scripts/healthcheck.js
+  CMD ./lib/utils/healthcheck.js
 
 RUN apk add --no-cache --upgrade bash
 
@@ -21,9 +22,8 @@ USER spacex
 WORKDIR /app
 ENTRYPOINT ["/app/start.sh"]
 
-COPY package.json package-lock.json /app/
+COPY --chown=spacex:spacex package.json package-lock.json /app/
 
 RUN npm install --production
 
-COPY . .
-
+COPY --chown=spacex:spacex . .

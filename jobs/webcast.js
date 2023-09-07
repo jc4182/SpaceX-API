@@ -1,38 +1,65 @@
-const got = require('got');
-const fuzz = require('fuzzball');
-const { logger } = require('../middleware/logger');
+import got from 'got';
+import * as fuzz from 'fuzzball';
+import Parser from 'rss-parser';
+import { fail, success } from '../lib/healthchecks/index.js';
+import { logger } from '../middleware/index.js';
 
 const YOUTUBE_PREFIX = 'https://youtu.be';
-const SPACEX_API = 'https://api.spacexdata.com/v4';
 const CHANNEL_ID = 'UCtI0Hodo5o5dUb67FeUjDeA';
 const {
   SPACEX_KEY,
-  YOUTUBE_KEY,
   WEBCAST_HEALTHCHECK,
+  SPACEX_API: API,
 } = process.env;
 
 /**
  * Check for new SpaceX webcast links
  * @return {Promise<void>}
  */
-module.exports = async () => {
+export default async () => {
   try {
-    // Check if any upcoming streams on youtube
-    const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${CHANNEL_ID}&eventType=upcoming&maxResults=1&type=video&key=${YOUTUBE_KEY}`;
-    const upcomingStreams = await got(url, {
+    let updated = false;
+    let match = false;
+    const parser = new Parser();
+    const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${CHANNEL_ID}`;
+    const rssResult = await got(url, {
+      resolveBodyOnly: true,
+    });
+    const result = await parser.parseString(rssResult);
+    const latest = result.items[0];
+    const rssTitle = latest.title;
+    const rssYoutubeId = latest.link.split('v=')[1];
+
+    const launches = await got.post(`${API}/launches/query`, {
+      json: {
+        query: {
+          upcoming: true,
+        },
+        options: {
+          sort: {
+            flight_number: 'asc',
+          },
+          limit: 1,
+        },
+      },
       resolveBodyOnly: true,
       responseType: 'json',
     });
+    const launchId = launches.docs[0].id;
+    const missionName = launches.docs[0].name;
 
-    if (upcomingStreams?.items?.length === 1) {
-      const launches = await got.post(`${SPACEX_API}/launches/query`, {
+    const ratio = fuzz.ratio(rssTitle, missionName);
+    // Prevent matching on mission control audio videos
+    if (!rssTitle.includes('audio') && ratio >= 50) {
+      match = true;
+      const pastLaunches = await got.post(`${API}/launches/query`, {
         json: {
           query: {
-            upcoming: true,
+            upcoming: false,
           },
           options: {
             sort: {
-              flight_number: 'asc',
+              flight_number: 'desc',
             },
             limit: 1,
           },
@@ -40,49 +67,37 @@ module.exports = async () => {
         resolveBodyOnly: true,
         responseType: 'json',
       });
-      const launchId = launches.docs[0].id;
-      const missionName = launches.docs[0].name;
-      const youtubeTitle = upcomingStreams.items[0].snippet.title;
-      const youtubeId = upcomingStreams.items[0].id.videoId;
-
-      // Fuzzy check video title to make sure it's at least related to the launch
-      const ratio = fuzz.ratio(youtubeTitle, missionName);
-      if (ratio >= 50) {
-        await got.patch(`${SPACEX_API}/launches/${launchId}`, {
+      const pastYoutubeId = pastLaunches.docs[0].links.youtube_id;
+      if (rssYoutubeId !== pastYoutubeId) {
+        await got.patch(`${API}/launches/${launchId}`, {
           json: {
-            'links.webcast': `${YOUTUBE_PREFIX}/${youtubeId}`,
-            'links.youtube_id': youtubeId,
+            'links.webcast': `${YOUTUBE_PREFIX}/${rssYoutubeId}`,
+            'links.youtube_id': rssYoutubeId,
           },
           headers: {
             'spacex-key': SPACEX_KEY,
           },
         });
-        logger.info({
-          rawMission: youtubeTitle,
-          apiMission: missionName,
-          url: `${YOUTUBE_PREFIX}/${youtubeId}`,
-          matchRatio: ratio,
-          match: true,
-        });
-      } else {
-        logger.info({
-          rawMission: youtubeTitle,
-          apiMission: missionName,
-          url: `${YOUTUBE_PREFIX}/${youtubeId}`,
-          matchRatio: ratio,
-          match: false,
-        });
+        updated = true;
       }
-    } else {
-      logger.info({
-        match: false,
-      });
     }
-
-    if (WEBCAST_HEALTHCHECK) {
-      await got(WEBCAST_HEALTHCHECK);
-    }
+    const log = {
+      name: 'webcast',
+      ratio,
+      match,
+      updated,
+      youtubeTitle: rssTitle,
+      youtubeId: rssYoutubeId,
+    };
+    await success(WEBCAST_HEALTHCHECK, log);
+    logger.info(log);
   } catch (error) {
-    console.log(error);
+    const formatted = {
+      name: 'webcast',
+      error: error.message,
+      stack: error.stack,
+    };
+    await fail(WEBCAST_HEALTHCHECK, formatted);
+    logger.error(formatted);
   }
 };

@@ -1,6 +1,6 @@
 # List of known API clients / wrappers
 
-> _Do you, or do you know of some client/wrapper, that makes use of this community maintained service? If so, please [create an issue](https://github.com/r-spacex/SpaceX-API/issues/new) or [submit a PR](https://github.com/r-spacex/SpaceX-API/blob/master/CONTRIBUTING.md) with additions to this list. Thanks_
+> _Do you, or do you know of some client/wrapper, that makes use of this community maintained service? If so, please [create an issue](https://github.com/r-spacex/SpaceX-API/issues/new) or [submit a PR](https://github.com/r-spacex/SpaceX-API/pulls) with additions to this list. Thanks_
 
 NOTE: Clients are grouped by API version(s) supported
 
@@ -9,9 +9,16 @@ NOTE: Clients are grouped by API version(s) supported
 |Name|Lang|Creator(s)|Repo|
 |:---|:---|:---|:---|
 | Oddity | .NET  | Tearth | [GitHub](https://github.com/Tearth/Oddity) |
-| SpaceX-Async-Wrapper | Python | Ryu JuHeon | [GitHub](https://github.com/SaidBySolo/SpaceX-Async-Wrapper) |
-| KSBSpacexKit | Swift | SaiBalaji22 | [GitHub](https://github.com/SaiBalaji22/KSBSpacexKit) |
+| SpaceXPy | Python | Ryu JuHeon | [GitHub](https://github.com/SaidBySolo/SpaceXPy) |
+| KSBSpacexKit | Swift | SaiBalaji K| [GitHub](https://github.com/SaiBalaji22/KSBSpacexKit) |
 | Marsy | C++ | AzuxDario | [GitHub](https://github.com/AzuxDario/Marsy) |
+| Spacex-api.js | Node.js | AkiaCode | [Github](https://github.com/AkiaCode/spacex-api.js) |
+| spacex_api | Dart | Ahsanz024 | [Github](https://github.com/ahsanz024/spacex_api) |
+| spacex_api | Ruby | Victor Perez | [Github](https://github.com/victorperez/spacex-api-ruby) |
+| xploration-graphql | TypeScript | Kartik Kumar Gujarati | [Github](https://github.com/Kartikkumargujarati/xploration-graphql) |
+| spacex-graphql-gateway | TypeScript | Kevin Hermawan | [Github](https://github.com/kevinstd/spacex-graphql-gateway) |
+| r/SpaceX (Independent Publisher) | [Power Platform](https://docs.microsoft.com/en-us/connectors/rspacexip/) | Troy Taylor | [Github](https://github.com/troystaylor/PowerPlatformConnectors/tree/r/SpaceX/independent-publisher-connectors/rSpaceX) |
+| spacex-api | Java | Andrey Vasilyev | [Github](https://github.com/artfultom/spacex-api) |
 
 ### V3, V2, V1 (Deprecated)
 
