@@ -35,7 +35,7 @@
     "got": "^12.5.3",
     "ioredis": "^5.3.2",
     "koa": "^2.14.1",
-    "koa-bodyparser": "^4.3.0",
+    "koa-bodyparser": "^4.4.1",
     "koa-conditional-get": "^3.0.0",
     "koa-etag": "^4.0.0",
     "koa-helmet": "^6.1.0",
