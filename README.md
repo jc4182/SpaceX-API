@@ -1,4 +1,5 @@
 [![Test](https://github.com/KOSASIH/SpaceX-API/actions/workflows/test.yml/badge.svg)](https://github.com/KOSASIH/SpaceX-API/actions/workflows/test.yml)
+[![CodeQL](https://github.com/r-spacex/SpaceX-API/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/r-spacex/SpaceX-API/actions/workflows/codeql-analysis.yml)
 ![Your Repository's Stats](https://github-readme-stats.vercel.app/api?username=KOSASIH&show_icons=true)
 ![Your Repository's Stats](https://github-readme-stats.vercel.app/api/top-langs/?username=KOSASIH&theme=blue-green)
 
