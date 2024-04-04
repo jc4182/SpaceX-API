@@ -1,4 +1,4 @@
-[![Test](https://github.com/KOSASIH/SpaceX-API/actions/workflows/test.yml/badge.svg)](https://github.com/KOSASIH/SpaceX-API/actions/workflows/test.yml)
+[![Dependabot compatibility score](https://dependabot-badges.githubapp.com/badges/compatibility_score?dependency-name=es5-ext&package-manager=npm_and_yarn&previous-version=0.10.53&new-version=0.10.63)](https://docs.github.com/en/github/managing-security-vulnerabilities/about-dependabot-security-updates#about-compatibility-scores)
 [![CodeQL](https://github.com/r-spacex/SpaceX-API/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/r-spacex/SpaceX-API/actions/workflows/codeql-analysis.yml)
 ![Your Repository's Stats](https://github-readme-stats.vercel.app/api?username=KOSASIH&show_icons=true)
 ![Your Repository's Stats](https://github-readme-stats.vercel.app/api/top-langs/?username=KOSASIH&theme=blue-green)
